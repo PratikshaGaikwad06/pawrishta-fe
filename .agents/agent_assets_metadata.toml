@@ -1,0 +1,26 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "MNgKN9VD6Y-8PTWX14SAi"
+uri = "file://artifacts/pawmatch/assets/images/icon.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "caVCGn1JC9vGh-UDIn7pz"
+uri = "file://artifacts/pawmatch/assets/images/dog1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "KmpsvU46R6xkV8yFIo-K7"
+uri = "file://artifacts/pawmatch/assets/images/dog2.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "gL4bc5OL4JRqGYY16a8eS"
+uri = "file://artifacts/pawmatch/assets/images/dog3.png"
+type = "image"
+title = "generated_image"
