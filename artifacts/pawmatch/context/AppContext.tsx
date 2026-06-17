@@ -7,6 +7,8 @@ import React, {
   useState,
 } from "react";
 import { Dog } from "./AuthContext";
+import { useAuth } from "./AuthContext";
+import { apiFetch } from "@/utils/apiClient";
 
 export type Mode = "playdate" | "breeding";
 
@@ -44,10 +46,36 @@ interface AppContextType {
   sendMessage: (matchId: string, text: string) => void;
   getMatchedDogs: () => MatchRequest[];
   getPendingIncoming: () => MatchRequest[];
+  refreshRequests: () => Promise<void>;
 }
 
-const DOGS_STORAGE = "@pawmatch_dogs";
-const REQUESTS_STORAGE = "@pawmatch_requests";
+interface InterestResponseDTO {
+  id: number;
+  senderId: number;
+  receiverId: number;
+  dogId: number;
+  status: "PENDING" | "ACCEPTED" | "REJECTED";
+}
+
+interface MessageResponseDTO {
+  id: number;
+  chatId: number;
+  senderId: number;
+  content: string;
+  createdAt: string;
+}
+
+interface ChatListResponseDTO {
+  id: number;
+  chatName: string;
+}
+
+interface MessageCursorResponseDTO {
+  messages: MessageResponseDTO[];
+  nextCursor: number | null;
+  hasMore: boolean;
+}
+
 const CHATS_STORAGE = "@pawmatch_chats";
 
 const MOCK_DOGS: Dog[] = [
@@ -143,20 +171,20 @@ const MOCK_DOGS: Dog[] = [
   },
 ];
 
-const MOCK_REQUESTS: MatchRequest[] = [
-  {
-    id: "r1",
-    fromOwnerId: "u3",
-    fromDogId: "d3",
-    toOwnerId: "me",
-    toDogId: "mydog",
+function mapInterestToRequest(i: InterestResponseDTO, myUserId: string): MatchRequest {
+  const isIncoming = String(i.receiverId) === myUserId;
+  return {
+    id: String(i.id),
+    fromOwnerId: String(i.senderId),
+    fromDogId: String(i.dogId),
+    toOwnerId: String(i.receiverId),
+    toDogId: String(i.dogId),
     mode: "playdate",
-    status: "pending",
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-    fromDog: MOCK_DOGS[2],
-    fromOwnerName: "Sarah M.",
-  },
-];
+    status: i.status === "PENDING" ? "pending" : i.status === "ACCEPTED" ? "accepted" : "rejected",
+    createdAt: new Date().toISOString(),
+    fromOwnerName: isIncoming ? `User ${i.senderId}` : undefined,
+  };
+}
 
 const AppContext = createContext<AppContextType>({
   mode: "playdate",
@@ -169,88 +197,212 @@ const AppContext = createContext<AppContextType>({
   sendMessage: () => {},
   getMatchedDogs: () => [],
   getPendingIncoming: () => [],
+  refreshRequests: async () => {},
 });
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { owner } = useAuth();
   const [mode, setModeState] = useState<Mode>("playdate");
   const [nearbyDogs] = useState<Dog[]>(MOCK_DOGS);
   const [requests, setRequests] = useState<MatchRequest[]>([]);
   const [chats, setChats] = useState<Record<string, ChatMessage[]>>({});
+  const [chatIdMap, setChatIdMap] = useState<Record<string, number>>({});
+
+  const loadInterests = useCallback(async (userId: string) => {
+    try {
+      const [received, sent] = await Promise.all([
+        apiFetch<InterestResponseDTO[]>(`/api/v1/users/${userId}/interests/received`),
+        apiFetch<InterestResponseDTO[]>(`/api/v1/users/${userId}/interests/sent`),
+      ]);
+      const all = [...(received ?? []), ...(sent ?? [])];
+      setRequests(all.map((i) => mapInterestToRequest(i, userId)));
+    } catch {}
+  }, []);
+
+  const loadChats = useCallback(async (userId: string) => {
+    try {
+      const apiChats = await apiFetch<ChatListResponseDTO[]>(`/api/v1/users/${userId}/chats`);
+      if (!apiChats?.length) return;
+
+      const newChatIdMap: Record<string, number> = {};
+      const newChats: Record<string, ChatMessage[]> = {};
+
+      await Promise.all(
+        apiChats.map(async (c) => {
+          const matchId = String(c.id);
+          newChatIdMap[matchId] = c.id;
+          try {
+            const res = await apiFetch<MessageCursorResponseDTO>(
+              `/api/v1/chats/${c.id}/messages?limit=50`,
+            );
+            newChats[matchId] = (res.messages ?? []).map((m) => ({
+              id: String(m.id),
+              matchId,
+              fromOwnerId: String(m.senderId),
+              text: m.content,
+              createdAt: m.createdAt,
+            }));
+          } catch {
+            newChats[matchId] = [];
+          }
+        }),
+      );
+
+      setChatIdMap(newChatIdMap);
+      setChats(newChats);
+    } catch {}
+  }, []);
 
   useEffect(() => {
+    if (!owner?.id) return;
+    loadInterests(owner.id);
+    loadChats(owner.id);
+  }, [owner?.id, loadInterests, loadChats]);
+
+  useEffect(() => {
+    if (owner?.id) return;
     (async () => {
       try {
-        const stored = await AsyncStorage.getItem(REQUESTS_STORAGE);
-        if (stored) {
-          setRequests(JSON.parse(stored));
-        } else {
-          setRequests(MOCK_REQUESTS);
-        }
-        const storedChats = await AsyncStorage.getItem(CHATS_STORAGE);
-        if (storedChats) setChats(JSON.parse(storedChats));
+        const stored = await AsyncStorage.getItem(CHATS_STORAGE);
+        if (stored) setChats(JSON.parse(stored));
       } catch {}
     })();
-  }, []);
+  }, [owner?.id]);
+
+  const refreshRequests = useCallback(async () => {
+    if (!owner?.id) return;
+    await loadInterests(owner.id);
+  }, [owner?.id, loadInterests]);
 
   const setMode = useCallback((m: Mode) => {
     setModeState(m);
   }, []);
 
-  const sendRequest = useCallback((toDogId: string, toOwnerId: string) => {
-    const req: MatchRequest = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      fromOwnerId: "me",
-      fromDogId: "mydog",
-      toOwnerId,
-      toDogId,
-      mode,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    };
-    setRequests((prev) => {
-      const updated = [...prev, req];
-      AsyncStorage.setItem(REQUESTS_STORAGE, JSON.stringify(updated));
-      return updated;
-    });
-  }, [mode]);
+  const sendRequest = useCallback(
+    async (toDogId: string, toOwnerId: string) => {
+      if (!owner?.id) return;
 
-  const respondToRequest = useCallback((requestId: string, accept: boolean) => {
-    setRequests((prev) => {
-      const updated = prev.map((r) =>
-        r.id === requestId
-          ? { ...r, status: accept ? ("accepted" as RequestStatus) : ("rejected" as RequestStatus) }
-          : r
+      const optimistic: MatchRequest = {
+        id: `tmp-${Date.now()}`,
+        fromOwnerId: owner.id,
+        fromDogId: "mydog",
+        toOwnerId,
+        toDogId,
+        mode,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+      };
+      setRequests((prev) => [...prev, optimistic]);
+
+      try {
+        const res = await apiFetch<InterestResponseDTO>(
+          `/api/v1/users/${owner.id}/interests`,
+          {
+            method: "POST",
+            body: JSON.stringify({ dogId: parseInt(toDogId, 10) }),
+          },
+        );
+        const confirmed = mapInterestToRequest(res, owner.id);
+        setRequests((prev) =>
+          prev.map((r) => (r.id === optimistic.id ? confirmed : r)),
+        );
+      } catch {
+        setRequests((prev) => prev.filter((r) => r.id !== optimistic.id));
+      }
+    },
+    [owner?.id, mode],
+  );
+
+  const respondToRequest = useCallback(
+    async (requestId: string, accept: boolean) => {
+      if (!owner?.id) return;
+
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === requestId
+            ? { ...r, status: accept ? ("accepted" as RequestStatus) : ("rejected" as RequestStatus) }
+            : r,
+        ),
       );
-      AsyncStorage.setItem(REQUESTS_STORAGE, JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
 
-  const sendMessage = useCallback((matchId: string, text: string) => {
-    const msg: ChatMessage = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      matchId,
-      fromOwnerId: "me",
-      text,
-      createdAt: new Date().toISOString(),
-    };
-    setChats((prev) => {
-      const updated = {
+      try {
+        const action = accept ? "accept" : "reject";
+        await apiFetch(
+          `/api/v1/users/${owner.id}/interests/${requestId}/${action}`,
+          { method: "PUT" },
+        );
+        if (accept) {
+          await loadChats(owner.id);
+        }
+      } catch {
+        await loadInterests(owner.id);
+      }
+    },
+    [owner?.id, loadInterests, loadChats],
+  );
+
+  const sendMessage = useCallback(
+    async (matchId: string, text: string) => {
+      if (!owner?.id) return;
+
+      const msg: ChatMessage = {
+        id: `tmp-${Date.now()}`,
+        matchId,
+        fromOwnerId: owner.id,
+        text,
+        createdAt: new Date().toISOString(),
+      };
+
+      setChats((prev) => ({
         ...prev,
         [matchId]: [...(prev[matchId] ?? []), msg],
-      };
-      AsyncStorage.setItem(CHATS_STORAGE, JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
+      }));
+
+      const chatId = chatIdMap[matchId];
+      if (chatId) {
+        try {
+          const res = await apiFetch<MessageResponseDTO>(
+            `/api/v1/chats/${chatId}/messages`,
+            {
+              method: "POST",
+              body: JSON.stringify({
+                senderId: parseInt(owner.id, 10),
+                content: text,
+              }),
+            },
+          );
+          const confirmed: ChatMessage = {
+            id: String(res.id),
+            matchId,
+            fromOwnerId: String(res.senderId),
+            text: res.content,
+            createdAt: res.createdAt,
+          };
+          setChats((prev) => ({
+            ...prev,
+            [matchId]: (prev[matchId] ?? []).map((m) =>
+              m.id === msg.id ? confirmed : m,
+            ),
+          }));
+        } catch {}
+      } else {
+        setChats((prev) => {
+          const updated = { ...prev, [matchId]: [...(prev[matchId] ?? []), msg] };
+          AsyncStorage.setItem(CHATS_STORAGE, JSON.stringify(updated));
+          return updated;
+        });
+      }
+    },
+    [owner?.id, chatIdMap],
+  );
 
   const getMatchedDogs = useCallback(() => {
     return requests.filter((r) => r.status === "accepted");
   }, [requests]);
 
   const getPendingIncoming = useCallback(() => {
-    return requests.filter((r) => r.toOwnerId === "me" && r.status === "pending");
-  }, [requests]);
+    return requests.filter((r) => r.toOwnerId === owner?.id && r.status === "pending");
+  }, [requests, owner?.id]);
 
   return (
     <AppContext.Provider
@@ -265,6 +417,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         sendMessage,
         getMatchedDogs,
         getPendingIncoming,
+        refreshRequests,
       }}
     >
       {children}

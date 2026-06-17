@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import { apiFetch } from "@/utils/apiClient";
 
 export interface Owner {
   id: string;
@@ -55,30 +56,49 @@ interface RegisterData {
   dogGender: "male" | "female";
 }
 
-const MOCK_OWNER: Owner = {
-  id: "me",
-  name: "Alex Johnson",
-  email: "alex@example.com",
-  avatar: undefined,
-  location: "San Francisco, CA",
-  bio: "Dog lover and outdoor enthusiast. Max loves morning runs and belly rubs.",
-  verified: true,
-};
+interface UserResponseDTO {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  latitude?: number;
+  longitude?: number;
+}
 
-const MOCK_MY_DOG: Dog = {
-  id: "mydog",
-  ownerId: "me",
-  name: "Max",
-  breed: "Golden Retriever",
-  age: 3,
-  gender: "male",
-  weight: 32,
-  bio: "Friendly and energetic! Loves to play fetch and make new friends at the park.",
-  photos: [],
-  vaccinated: true,
-  neutered: true,
-  temperament: ["Friendly", "Playful", "Gentle"],
-};
+interface DogResponseDTO {
+  id: number;
+  name: string;
+  breed: string;
+  age: number;
+  gender: string;
+  temperament?: string;
+  mode?: string;
+  photo_url?: string;
+  ownerId: number;
+}
+
+interface ApiResponseDogResponseDTO {
+  message: string;
+  data: DogResponseDTO;
+  status: number;
+}
+
+function mapApiDog(d: DogResponseDTO): Dog {
+  return {
+    id: String(d.id),
+    ownerId: String(d.ownerId),
+    name: d.name,
+    breed: d.breed,
+    age: d.age,
+    gender: (d.gender?.toLowerCase() === "female" ? "female" : "male") as "male" | "female",
+    weight: 0,
+    bio: "",
+    photos: d.photo_url ? [d.photo_url] : [],
+    vaccinated: false,
+    neutered: false,
+    temperament: d.temperament ? d.temperament.split(",").map((t) => t.trim()).filter(Boolean) : [],
+  };
+}
 
 const AuthContext = createContext<AuthContextType>({
   owner: null,
@@ -116,37 +136,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ owner: o, myDog: d }));
   }, []);
 
-  const login = useCallback(async (_email: string, _password: string) => {
-    await new Promise((r) => setTimeout(r, 1000));
-    setOwner(MOCK_OWNER);
-    setMyDog(MOCK_MY_DOG);
-    await persist(MOCK_OWNER, MOCK_MY_DOG);
+  const login = useCallback(async (email: string, _password: string) => {
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const { owner: o, myDog: d } = JSON.parse(stored);
+      if (o && o.email.toLowerCase() === email.toLowerCase()) {
+        try {
+          const fresh = await apiFetch<UserResponseDTO>(`/api/v1/users/${o.id}`);
+          const refreshedOwner: Owner = {
+            ...o,
+            id: String(fresh.id),
+            name: fresh.name,
+            email: fresh.email,
+          };
+          setOwner(refreshedOwner);
+          setMyDog(d);
+          await persist(refreshedOwner, d);
+          return;
+        } catch {
+          setOwner(o);
+          setMyDog(d);
+          return;
+        }
+      }
+    }
+    throw new Error("No account found for this email on this device. Please register first.");
   }, [persist]);
 
   const register = useCallback(async (data: RegisterData) => {
-    await new Promise((r) => setTimeout(r, 1200));
+    const userRes = await apiFetch<UserResponseDTO>("/api/v1/users/register", {
+      method: "POST",
+      body: JSON.stringify({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        latitude: 0,
+        longitude: 0,
+      }),
+    });
+
     const newOwner: Owner = {
-      id: Date.now().toString(),
-      name: data.name,
-      email: data.email,
+      id: String(userRes.id),
+      name: userRes.name,
+      email: userRes.email,
       location: data.location,
       bio: "",
       verified: false,
     };
-    const newDog: Dog = {
-      id: Date.now().toString() + "d",
-      ownerId: newOwner.id,
-      name: data.dogName,
-      breed: data.dogBreed,
-      age: data.dogAge,
-      gender: data.dogGender,
-      weight: 0,
-      bio: "",
-      photos: [],
-      vaccinated: false,
-      neutered: false,
-      temperament: [],
-    };
+
+    const dogRes = await apiFetch<ApiResponseDogResponseDTO>(
+      `/api/v1/users/${userRes.id}/dogs`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          name: data.dogName,
+          breed: data.dogBreed,
+          age: data.dogAge,
+          gender: data.dogGender,
+        }),
+      },
+    );
+
+    const newDog = mapApiDog(dogRes.data);
+
     setOwner(newOwner);
     setMyDog(newDog);
     await persist(newOwner, newDog);
