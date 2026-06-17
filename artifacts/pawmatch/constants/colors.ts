@@ -1,77 +1,79 @@
 const colors = {
   light: {
-    text: "#1a1a1a",
-    tint: "#E8650A",
+    text: "#1C1A16",
+    tint: "#C8874A",
 
-    background: "#FAFAF8",
-    foreground: "#1a1a1a",
+    background: "#F5F0E8",
+    foreground: "#1C1A16",
 
     card: "#FFFFFF",
-    cardForeground: "#1a1a1a",
+    cardForeground: "#1C1A16",
 
-    primary: "#E8650A",
+    primary: "#C8874A",
     primaryForeground: "#FFFFFF",
 
-    secondary: "#FFF3EA",
-    secondaryForeground: "#E8650A",
+    secondary: "#EDE5D8",
+    secondaryForeground: "#7A5C3A",
 
-    muted: "#F5F3EF",
-    mutedForeground: "#8A8078",
+    muted: "#EAE4D8",
+    mutedForeground: "#8A7A68",
 
-    accent: "#FF8C42",
+    accent: "#4A7C59",
     accentForeground: "#FFFFFF",
 
-    destructive: "#E63946",
+    destructive: "#C94040",
     destructiveForeground: "#FFFFFF",
 
-    border: "#EDE8E1",
-    input: "#EDE8E1",
+    border: "#DDD5C5",
+    input: "#DDD5C5",
 
-    success: "#2D9A6A",
+    success: "#4A7C59",
     successForeground: "#FFFFFF",
 
-    warning: "#F4A226",
+    warning: "#C8874A",
     warningForeground: "#FFFFFF",
 
-    overlay: "rgba(26,26,26,0.5)",
+    overlay: "rgba(28,26,22,0.6)",
+    glass: "rgba(245,240,232,0.85)",
   },
   dark: {
-    text: "#F5F0EA",
-    tint: "#FF8C42",
+    text: "#F0EBE1",
+    tint: "#D4924A",
 
-    background: "#121210",
-    foreground: "#F5F0EA",
+    background: "#0F0E0C",
+    foreground: "#F0EBE1",
 
-    card: "#1E1E1A",
-    cardForeground: "#F5F0EA",
+    card: "#1C1A16",
+    cardForeground: "#F0EBE1",
 
-    primary: "#FF8C42",
-    primaryForeground: "#1a1a1a",
+    primary: "#D4924A",
+    primaryForeground: "#0F0E0C",
 
-    secondary: "#2A2015",
-    secondaryForeground: "#FF8C42",
+    secondary: "#2A2520",
+    secondaryForeground: "#D4924A",
 
-    muted: "#272520",
-    mutedForeground: "#9A9088",
+    muted: "#1E1C18",
+    mutedForeground: "#7A7060",
 
-    accent: "#E8650A",
-    accentForeground: "#FFFFFF",
+    accent: "#5A9468",
+    accentForeground: "#0F0E0C",
 
-    destructive: "#E63946",
+    destructive: "#C94040",
     destructiveForeground: "#FFFFFF",
 
-    border: "#2E2B25",
-    input: "#2E2B25",
+    border: "#2E2B24",
+    input: "#2E2B24",
 
-    success: "#2D9A6A",
-    successForeground: "#FFFFFF",
+    success: "#5A9468",
+    successForeground: "#0F0E0C",
 
-    warning: "#F4A226",
-    warningForeground: "#FFFFFF",
+    warning: "#D4924A",
+    warningForeground: "#0F0E0C",
 
-    overlay: "rgba(0,0,0,0.7)",
+    overlay: "rgba(0,0,0,0.75)",
+    glass: "rgba(28,26,22,0.9)",
   },
-  radius: 16,
+  radius: 12,
 };
 
 export default colors;

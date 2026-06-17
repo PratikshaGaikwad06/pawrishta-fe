@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useRef } from "react";
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Mode } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -19,27 +19,21 @@ export function ModeToggle({ mode, onToggle }: ModeToggleProps) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.muted, borderRadius: colors.radius }]}>
+    <View style={[styles.container, { backgroundColor: colors.muted, borderRadius: 50 }]}>
       <TouchableOpacity
         style={[
           styles.option,
-          { borderRadius: colors.radius - 4 },
           mode === "playdate" && { backgroundColor: colors.primary },
         ]}
         onPress={() => select("playdate")}
         activeOpacity={0.85}
       >
         <Ionicons
-          name="happy-outline"
-          size={16}
-          color={mode === "playdate" ? "#fff" : colors.mutedForeground}
+          name="sunny-outline"
+          size={14}
+          color={mode === "playdate" ? colors.primaryForeground : colors.mutedForeground}
         />
-        <Text
-          style={[
-            styles.label,
-            { color: mode === "playdate" ? "#fff" : colors.mutedForeground },
-          ]}
-        >
+        <Text style={[styles.label, { color: mode === "playdate" ? colors.primaryForeground : colors.mutedForeground }]}>
           Playdate
         </Text>
       </TouchableOpacity>
@@ -47,23 +41,17 @@ export function ModeToggle({ mode, onToggle }: ModeToggleProps) {
       <TouchableOpacity
         style={[
           styles.option,
-          { borderRadius: colors.radius - 4 },
-          mode === "breeding" && { backgroundColor: colors.primary },
+          mode === "breeding" && { backgroundColor: colors.accent },
         ]}
         onPress={() => select("breeding")}
         activeOpacity={0.85}
       >
         <Ionicons
-          name="heart-outline"
-          size={16}
-          color={mode === "breeding" ? "#fff" : colors.mutedForeground}
+          name="leaf-outline"
+          size={14}
+          color={mode === "breeding" ? colors.accentForeground : colors.mutedForeground}
         />
-        <Text
-          style={[
-            styles.label,
-            { color: mode === "breeding" ? "#fff" : colors.mutedForeground },
-          ]}
-        >
+        <Text style={[styles.label, { color: mode === "breeding" ? colors.accentForeground : colors.mutedForeground }]}>
           Breeding
         </Text>
       </TouchableOpacity>
@@ -75,14 +63,15 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     padding: 4,
+    alignSelf: "center",
   },
   option: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 8,
+    gap: 5,
+    paddingHorizontal: 18,
+    paddingVertical: 7,
+    borderRadius: 50,
   },
   label: {
     fontSize: 13,

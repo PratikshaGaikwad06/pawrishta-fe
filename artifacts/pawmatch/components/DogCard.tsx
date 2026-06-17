@@ -4,7 +4,6 @@ import React, { useRef } from "react";
 import {
   Animated,
   Dimensions,
-  Image,
   PanResponder,
   Platform,
   StyleSheet,
@@ -12,14 +11,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Dog } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { dogPlaceholderColor } from "@/utils/dogColors";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_WIDTH = SCREEN_WIDTH - 32;
-const CARD_HEIGHT = CARD_WIDTH * 1.35;
-const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
+const { width: W, height: H } = Dimensions.get("window");
+const CARD_HEIGHT = Platform.OS === "web" ? 520 : H * 0.72;
+const SWIPE_THRESHOLD = W * 0.28;
 
 interface DogCardProps {
   dog: Dog;
@@ -31,18 +30,19 @@ interface DogCardProps {
 export function DogCard({ dog, onInterest, onSkip, isTop = false }: DogCardProps) {
   const colors = useColors();
   const pan = useRef(new Animated.ValueXY()).current;
+
   const rotate = pan.x.interpolate({
-    inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
-    outputRange: ["-12deg", "0deg", "12deg"],
+    inputRange: [-W / 2, 0, W / 2],
+    outputRange: ["-10deg", "0deg", "10deg"],
     extrapolate: "clamp",
   });
   const likeOpacity = pan.x.interpolate({
-    inputRange: [0, SCREEN_WIDTH * 0.2],
+    inputRange: [0, W * 0.18],
     outputRange: [0, 1],
     extrapolate: "clamp",
   });
-  const skipOpacity = pan.x.interpolate({
-    inputRange: [-SCREEN_WIDTH * 0.2, 0],
+  const passOpacity = pan.x.interpolate({
+    inputRange: [-W * 0.18, 0],
     outputRange: [1, 0],
     extrapolate: "clamp",
   });
@@ -56,31 +56,21 @@ export function DogCard({ dog, onInterest, onSkip, isTop = false }: DogCardProps
       onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
         useNativeDriver: false,
       }),
-      onPanResponderRelease: (_, gesture) => {
+      onPanResponderRelease: (_, g) => {
         pan.flattenOffset();
-        if (gesture.dx > SWIPE_THRESHOLD) {
-          Animated.spring(pan, {
-            toValue: { x: SCREEN_WIDTH + 100, y: gesture.dy },
-            useNativeDriver: false,
-          }).start(() => {
+        if (g.dx > SWIPE_THRESHOLD) {
+          Animated.spring(pan, { toValue: { x: W + 120, y: g.dy }, useNativeDriver: false }).start(() => {
             pan.setValue({ x: 0, y: 0 });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onInterest();
           });
-        } else if (gesture.dx < -SWIPE_THRESHOLD) {
-          Animated.spring(pan, {
-            toValue: { x: -SCREEN_WIDTH - 100, y: gesture.dy },
-            useNativeDriver: false,
-          }).start(() => {
+        } else if (g.dx < -SWIPE_THRESHOLD) {
+          Animated.spring(pan, { toValue: { x: -W - 120, y: g.dy }, useNativeDriver: false }).start(() => {
             pan.setValue({ x: 0, y: 0 });
             onSkip();
           });
         } else {
-          Animated.spring(pan, {
-            toValue: { x: 0, y: 0 },
-            friction: 5,
-            useNativeDriver: false,
-          }).start();
+          Animated.spring(pan, { toValue: { x: 0, y: 0 }, friction: 6, useNativeDriver: false }).start();
         }
       },
     })
@@ -93,244 +83,194 @@ export function DogCard({ dog, onInterest, onSkip, isTop = false }: DogCardProps
       style={[
         styles.card,
         {
-          backgroundColor: colors.card,
-          borderRadius: colors.radius,
+          height: CARD_HEIGHT,
+          borderRadius: 28,
           transform: isTop
             ? [{ translateX: pan.x }, { translateY: pan.y }, { rotate }]
-            : [{ scale: 0.96 }, { translateY: 12 }],
-          shadowColor: colors.foreground,
+            : [{ scale: 0.93 }, { translateY: 18 }],
         },
       ]}
       {...(isTop ? panResponder.panHandlers : {})}
     >
-      {/* Photo */}
-      <View style={[styles.photoContainer, { backgroundColor: bgColor, borderRadius: colors.radius }]}>
-        {dog.photos.length > 0 ? (
-          <Image source={{ uri: dog.photos[0] }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
-        ) : (
-          <View style={styles.placeholderIcon}>
-            <MaterialCommunityIcons name="dog" size={80} color="rgba(255,255,255,0.7)" />
-          </View>
-        )}
+      {/* Background photo / placeholder */}
+      <View style={[styles.photo, { backgroundColor: bgColor }]}>
+        <MaterialCommunityIcons name="dog" size={120} color="rgba(255,255,255,0.18)" />
+      </View>
 
-        {/* Badges */}
-        <View style={styles.topBadges}>
-          {dog.vaccinated && (
-            <View style={[styles.badge, { backgroundColor: "rgba(45,154,106,0.9)" }]}>
-              <Ionicons name="shield-checkmark" size={12} color="#fff" />
-            </View>
-          )}
-          <View style={[styles.badge, { backgroundColor: "rgba(0,0,0,0.55)" }]}>
-            <Ionicons name="location-sharp" size={12} color="#fff" />
-            <Text style={styles.badgeText}>{dog.distance?.toFixed(1)} km</Text>
-          </View>
+      {/* Gradient overlay */}
+      <LinearGradient
+        colors={["transparent", "rgba(10,9,7,0.55)", "rgba(10,9,7,0.97)"]}
+        locations={[0.35, 0.65, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      {/* Top badges */}
+      <View style={styles.topRow}>
+        <View style={styles.distancePill}>
+          <Ionicons name="location-sharp" size={12} color="rgba(255,255,255,0.9)" />
+          <Text style={styles.distanceText}>{dog.distance?.toFixed(1)} km</Text>
         </View>
-
-        {/* Swipe overlays */}
-        {isTop && (
-          <>
-            <Animated.View style={[styles.likeLabel, { opacity: likeOpacity }]}>
-              <Text style={styles.likeText}>WOOF!</Text>
-            </Animated.View>
-            <Animated.View style={[styles.skipLabel, { opacity: skipOpacity }]}>
-              <Text style={styles.skipText}>PASS</Text>
-            </Animated.View>
-          </>
+        {dog.vaccinated && (
+          <View style={styles.verifiedPill}>
+            <Ionicons name="shield-checkmark" size={12} color="#5A9468" />
+            <Text style={[styles.distanceText, { color: "#5A9468" }]}>Vaccinated</Text>
+          </View>
         )}
       </View>
 
-      {/* Info */}
+      {/* Swipe labels */}
+      {isTop && (
+        <>
+          <Animated.View style={[styles.swipeLabel, styles.swipeLabelLeft, { opacity: likeOpacity }]}>
+            <Text style={[styles.swipeLabelText, { color: "#5A9468" }]}>WOOF!</Text>
+          </Animated.View>
+          <Animated.View style={[styles.swipeLabel, styles.swipeLabelRight, { opacity: passOpacity }]}>
+            <Text style={[styles.swipeLabelText, { color: "#C94040" }]}>PASS</Text>
+          </Animated.View>
+        </>
+      )}
+
+      {/* Info overlay */}
       <View style={styles.info}>
         <View style={styles.nameRow}>
-          <Text style={[styles.name, { color: colors.foreground }]}>
-            {dog.name}
-          </Text>
-          <Text style={[styles.age, { color: colors.mutedForeground }]}>
-            {dog.age}y
-          </Text>
+          <Text style={styles.name}>{dog.name}</Text>
+          <Text style={styles.age}>{dog.age}y</Text>
           <Ionicons
             name={dog.gender === "female" ? "female" : "male"}
-            size={18}
-            color={dog.gender === "female" ? "#E8519A" : "#4A90D9"}
-            style={{ marginLeft: 2 }}
+            size={20}
+            color={dog.gender === "female" ? "#E892B8" : "#7AB0E8"}
           />
         </View>
-        <Text style={[styles.breed, { color: colors.mutedForeground }]}>{dog.breed}</Text>
-        <Text style={[styles.bio, { color: colors.foreground }]} numberOfLines={2}>
-          {dog.bio}
-        </Text>
+        <Text style={styles.breed}>{dog.breed}</Text>
+        <Text style={styles.bio} numberOfLines={2}>{dog.bio}</Text>
 
-        {/* Temperament */}
         <View style={styles.tags}>
           {dog.temperament.slice(0, 3).map((t) => (
-            <View key={t} style={[styles.tag, { backgroundColor: colors.secondary }]}>
-              <Text style={[styles.tagText, { color: colors.primary }]}>{t}</Text>
+            <View key={t} style={styles.tag}>
+              <Text style={styles.tagText}>{t}</Text>
             </View>
           ))}
         </View>
       </View>
-
-      {/* Action buttons */}
-      {isTop && (
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.skipBtn, { backgroundColor: colors.muted }]}
-            onPress={onSkip}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="close" size={28} color={colors.mutedForeground} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.interestBtn, { backgroundColor: colors.primary }]}
-            onPress={() => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              onInterest();
-            }}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="paw" size={28} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      )}
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    width: CARD_WIDTH,
-    position: "absolute",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 8,
-    overflow: "hidden",
-  },
-  photoContainer: {
     width: "100%",
-    height: CARD_HEIGHT * 0.6,
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  placeholderIcon: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  topBadges: {
     position: "absolute",
-    top: 12,
-    right: 12,
-    gap: 6,
-    flexDirection: "row",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.5,
+    shadowRadius: 32,
+    elevation: 12,
   },
-  badge: {
+  photo: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  topRow: {
+    position: "absolute",
+    top: 20,
+    left: 20,
+    right: 20,
+    flexDirection: "row",
+    gap: 8,
+  },
+  distancePill: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    gap: 4,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 20,
-    gap: 3,
   },
-  badgeText: {
-    color: "#fff",
-    fontSize: 11,
+  verifiedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  distanceText: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 12,
     fontFamily: "Inter_600SemiBold",
   },
-  likeLabel: {
+  swipeLabel: {
     position: "absolute",
-    top: 32,
-    left: 16,
+    top: "35%",
     borderWidth: 3,
-    borderColor: "#2D9A6A",
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    transform: [{ rotate: "-20deg" }],
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
-  likeText: {
-    color: "#2D9A6A",
-    fontSize: 26,
+  swipeLabelLeft: { left: 20, borderColor: "#5A9468", transform: [{ rotate: "-15deg" }] },
+  swipeLabelRight: { right: 20, borderColor: "#C94040", transform: [{ rotate: "15deg" }] },
+  swipeLabelText: {
+    fontSize: 28,
     fontFamily: "Inter_700Bold",
-  },
-  skipLabel: {
-    position: "absolute",
-    top: 32,
-    right: 16,
-    borderWidth: 3,
-    borderColor: "#E63946",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    transform: [{ rotate: "20deg" }],
-  },
-  skipText: {
-    color: "#E63946",
-    fontSize: 26,
-    fontFamily: "Inter_700Bold",
+    letterSpacing: 2,
   },
   info: {
-    padding: 16,
-    gap: 4,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 24,
+    gap: 6,
   },
   nameRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
   },
   name: {
-    fontSize: 22,
+    color: "#F0EBE1",
+    fontSize: 32,
     fontFamily: "Inter_700Bold",
+    letterSpacing: -0.5,
   },
   age: {
-    fontSize: 18,
+    color: "rgba(240,235,225,0.7)",
+    fontSize: 22,
     fontFamily: "Inter_400Regular",
   },
   breed: {
+    color: "rgba(240,235,225,0.65)",
     fontSize: 14,
     fontFamily: "Inter_400Regular",
-    marginTop: 1,
   },
   bio: {
+    color: "rgba(240,235,225,0.85)",
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     lineHeight: 20,
-    marginTop: 6,
+    marginTop: 2,
   },
   tags: {
     flexDirection: "row",
     gap: 6,
-    marginTop: 10,
+    marginTop: 8,
     flexWrap: "wrap",
   },
   tag: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
+    backgroundColor: "rgba(240,235,225,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(240,235,225,0.2)",
   },
   tagText: {
+    color: "rgba(240,235,225,0.9)",
     fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-  },
-  actions: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 20,
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    paddingTop: 4,
-  },
-  actionBtn: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  skipBtn: {},
-  interestBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    fontFamily: "Inter_500Medium",
   },
 });

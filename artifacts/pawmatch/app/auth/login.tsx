@@ -1,4 +1,5 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -27,68 +28,66 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const bottomPadding = Platform.OS === "web" ? 34 : insets.bottom;
+
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      setError("Please fill in all fields.");
-      return;
-    }
-    setError("");
-    setLoading(true);
+    if (!email.trim() || !password.trim()) { setError("Fill in all fields."); return; }
+    setError(""); setLoading(true);
     try {
       await login(email.trim(), password);
       router.replace("/(tabs)");
-    } catch {
-      setError("Invalid credentials. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError("Invalid credentials."); }
+    finally { setLoading(false); }
   };
-
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
   return (
     <KeyboardAvoidingView
       style={[styles.root, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      {/* Hero section */}
+      <View style={[styles.hero, { paddingTop: topPadding + 20 }]}>
+        <LinearGradient
+          colors={[colors.primary + "30", "transparent"]}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={[styles.iconRing, { borderColor: colors.primary + "40" }]}>
+          <View style={[styles.iconInner, { backgroundColor: colors.primary + "20" }]}>
+            <MaterialCommunityIcons name="dog-side" size={52} color={colors.primary} />
+          </View>
+        </View>
+        <Text style={[styles.heroTitle, { color: colors.foreground }]}>PawMatch</Text>
+        <Text style={[styles.heroSub, { color: colors.mutedForeground }]}>
+          Where tails meet tails
+        </Text>
+      </View>
+
       <ScrollView
-        contentContainerStyle={[styles.container, { paddingTop: topPadding + 24, paddingBottom: insets.bottom + 32 }]}
+        contentContainerStyle={[styles.form, { paddingBottom: bottomPadding + 32 }]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
-        <View style={[styles.logoContainer, { backgroundColor: colors.primary, borderRadius: colors.radius * 1.5 }]}>
-          <Ionicons name="paw" size={40} color="#fff" />
-        </View>
-        <Text style={[styles.appName, { color: colors.foreground }]}>PawMatch</Text>
-        <Text style={[styles.tagline, { color: colors.mutedForeground }]}>
-          Find the perfect companion for your pup
-        </Text>
+        {error ? (
+          <Text style={[styles.error, { color: colors.destructive }]}>{error}</Text>
+        ) : null}
 
-        {/* Form */}
-        <View style={styles.form}>
-          {error ? (
-            <View style={[styles.errorBox, { backgroundColor: colors.destructive + "15", borderRadius: colors.radius }]}>
-              <Ionicons name="alert-circle-outline" size={16} color={colors.destructive} />
-              <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
-            </View>
-          ) : null}
-
-          <View style={[styles.inputWrapper, { borderColor: colors.border, borderRadius: colors.radius, backgroundColor: colors.card }]}>
-            <Ionicons name="mail-outline" size={18} color={colors.mutedForeground} />
+        {/* Inputs */}
+        <View style={[styles.inputGroup, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: 20 }]}>
+          <View style={styles.inputRow}>
+            <Ionicons name="mail-outline" size={18} color={colors.mutedForeground} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: colors.foreground }]}
-              placeholder="Email"
+              placeholder="Email address"
               placeholderTextColor={colors.mutedForeground}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              autoCorrect={false}
             />
           </View>
-
-          <View style={[styles.inputWrapper, { borderColor: colors.border, borderRadius: colors.radius, backgroundColor: colors.card }]}>
-            <Ionicons name="lock-closed-outline" size={18} color={colors.mutedForeground} />
+          <View style={[styles.inputDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.inputRow}>
+            <Ionicons name="lock-closed-outline" size={18} color={colors.mutedForeground} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: colors.foreground }]}
               placeholder="Password"
@@ -97,41 +96,35 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               secureTextEntry={!showPass}
             />
-            <TouchableOpacity onPress={() => setShowPass(!showPass)}>
-              <Ionicons
-                name={showPass ? "eye-off-outline" : "eye-outline"}
-                size={18}
-                color={colors.mutedForeground}
-              />
+            <TouchableOpacity onPress={() => setShowPass(!showPass)} style={styles.eyeBtn}>
+              <Ionicons name={showPass ? "eye-off-outline" : "eye-outline"} size={18} color={colors.mutedForeground} />
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            style={[
-              styles.loginBtn,
-              { backgroundColor: loading ? colors.muted : colors.primary, borderRadius: colors.radius },
-            ]}
-            onPress={handleLogin}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.primary} />
-            ) : (
-              <Text style={styles.loginBtnText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
         </View>
 
-        {/* Register link */}
-        <View style={styles.registerRow}>
-          <Text style={[styles.registerPrompt, { color: colors.mutedForeground }]}>
-            Don't have an account?{" "}
-          </Text>
-          <TouchableOpacity onPress={() => router.push("/auth/register")}>
-            <Text style={[styles.registerLink, { color: colors.primary }]}>Sign Up</Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.btn, { backgroundColor: loading ? colors.muted : colors.primary, borderRadius: 16 }]}
+          onPress={handleLogin}
+          disabled={loading}
+          activeOpacity={0.85}
+        >
+          {loading ? <ActivityIndicator color={colors.primary} /> : <Text style={[styles.btnText, { color: colors.primaryForeground }]}>Continue</Text>}
+        </TouchableOpacity>
+
+        {/* Divider */}
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>or</Text>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
         </View>
+
+        <TouchableOpacity
+          style={[styles.outlineBtn, { borderColor: colors.border, borderRadius: 16 }]}
+          onPress={() => router.push("/auth/register")}
+          activeOpacity={0.85}
+        >
+          <Text style={[styles.outlineBtnText, { color: colors.foreground }]}>Create new account</Text>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -139,69 +132,59 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  container: {
-    paddingHorizontal: 24,
+  hero: {
     alignItems: "center",
+    paddingBottom: 36,
+    paddingHorizontal: 24,
   },
-  logoContainer: {
+  iconRing: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 1.5,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  iconInner: {
     width: 80,
     height: 80,
+    borderRadius: 40,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 12,
   },
-  appName: {
-    fontSize: 32,
+  heroTitle: {
+    fontSize: 36,
     fontFamily: "Inter_700Bold",
-    marginBottom: 6,
+    letterSpacing: -1,
   },
-  tagline: {
+  heroSub: {
     fontSize: 15,
     fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    marginBottom: 40,
-  },
-  form: {
-    width: "100%",
-    gap: 14,
-    marginBottom: 24,
-  },
-  errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 12,
-  },
-  errorText: { fontSize: 14, fontFamily: "Inter_400Regular", flex: 1 },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderWidth: 1.5,
-    paddingHorizontal: 14,
-    height: 52,
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    height: "100%",
-  },
-  loginBtn: {
-    height: 52,
-    justifyContent: "center",
-    alignItems: "center",
     marginTop: 4,
+    letterSpacing: 0.2,
   },
-  loginBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
+  form: { paddingHorizontal: 24, gap: 14 },
+  error: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  inputGroup: {
+    borderWidth: 1,
+    overflow: "hidden",
   },
-  registerRow: {
+  inputRow: {
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 16,
+    height: 54,
   },
-  registerPrompt: { fontSize: 14, fontFamily: "Inter_400Regular" },
-  registerLink: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  inputIcon: { marginRight: 10 },
+  input: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular" },
+  eyeBtn: { padding: 4 },
+  inputDivider: { height: 1, marginHorizontal: 16 },
+  btn: { height: 54, justifyContent: "center", alignItems: "center" },
+  btnText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  dividerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  outlineBtn: { height: 54, justifyContent: "center", alignItems: "center", borderWidth: 1.5 },
+  outlineBtnText: { fontSize: 16, fontFamily: "Inter_500Medium" },
 });

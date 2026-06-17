@@ -6,7 +6,6 @@ import { SymbolView } from "expo-symbols";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
-
 import { useColors } from "@/hooks/useColors";
 import { useApp } from "@/context/AppContext";
 
@@ -58,65 +57,40 @@ function ClassicTabLayout() {
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView
-              intensity={100}
-              tint={isDark ? "dark" : "light"}
-              style={StyleSheet.absoluteFill}
-            />
+            <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
           ) : isWeb ? (
-            <View
-              style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}
-            />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />
           ) : null,
+        tabBarShowLabel: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Discover",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="pawprint.fill" tintColor={color} size={22} />
-            ) : (
-              <Ionicons name="paw" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color, size }) =>
+            isIOS ? <SymbolView name="pawprint.fill" tintColor={color} size={24} /> : <Ionicons name="paw" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="matches"
         options={{
-          title: "Matches",
           tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="heart.fill" tintColor={color} size={22} />
-            ) : (
-              <Ionicons name="heart" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="heart.fill" tintColor={color} size={24} /> : <Ionicons name="heart" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
-          title: "Messages",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="message.fill" tintColor={color} size={22} />
-            ) : (
-              <Feather name="message-circle" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="message.fill" tintColor={color} size={24} /> : <Feather name="message-circle" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person.fill" tintColor={color} size={22} />
-            ) : (
-              <Ionicons name="person" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="person.fill" tintColor={color} size={24} /> : <Ionicons name="person" size={24} color={color} />,
         }}
       />
     </Tabs>
@@ -124,8 +98,6 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
+  if (isLiquidGlassAvailable()) return <NativeTabLayout />;
   return <ClassicTabLayout />;
 }

@@ -1,14 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import {
-  FlatList,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
@@ -18,8 +11,8 @@ export default function MessagesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { getMatchedDogs, chats, nearbyDogs } = useApp();
-
   const matched = getMatchedDogs();
+
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -34,6 +27,11 @@ export default function MessagesScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: topPadding + 8 }]}>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Messages</Text>
+        {matched.length > 0 && (
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
+            {matched.length} conversation{matched.length !== 1 ? "s" : ""}
+          </Text>
+        )}
       </View>
 
       <FlatList
@@ -43,57 +41,42 @@ export default function MessagesScreen() {
         scrollEnabled={!!enriched.length}
         ListEmptyComponent={() => (
           <View style={styles.empty}>
-            <MaterialCommunityIcons name="chat-outline" size={52} color={colors.mutedForeground} />
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No conversations yet</Text>
+            <MaterialCommunityIcons name="chat-sleep-outline" size={52} color={colors.mutedForeground} />
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No chats yet</Text>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              Chat is only unlocked after both owners match. Go accept requests in the Matches tab!
+              Chat unlocks after both owners match. Accept a request first.
             </Text>
           </View>
         )}
-        ItemSeparatorComponent={() => (
-          <View style={[styles.separator, { backgroundColor: colors.border }]} />
-        )}
         renderItem={({ item }) => {
           const bgColor = dogPlaceholderColor(item.req.fromDogId);
-          const hasUnread = !!item.lastMsg && item.lastMsg.fromOwnerId !== "me";
+          const isUnread = !!item.lastMsg && item.lastMsg.fromOwnerId !== "me";
+          const timeStr = item.lastMsg
+            ? new Date(item.lastMsg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            : "";
 
           return (
             <TouchableOpacity
-              style={styles.chatRow}
-              activeOpacity={0.75}
+              style={[styles.row, { borderBottomColor: colors.border }]}
+              activeOpacity={0.7}
               onPress={() => router.push(`/messages/${item.req.id}`)}
             >
-              <View style={[styles.avatar, { backgroundColor: bgColor, borderRadius: colors.radius - 4 }]}>
-                <MaterialCommunityIcons name="dog" size={28} color="rgba(255,255,255,0.85)" />
+              <View style={[styles.avatar, { backgroundColor: bgColor }]}>
+                <MaterialCommunityIcons name="dog" size={26} color="rgba(255,255,255,0.85)" />
+                {isUnread && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
               </View>
-              <View style={styles.chatInfo}>
-                <View style={styles.chatTopRow}>
-                  <Text style={[styles.dogName, { color: colors.foreground }]}>
+              <View style={styles.info}>
+                <View style={styles.rowTop}>
+                  <Text style={[styles.name, { color: colors.foreground, fontFamily: isUnread ? "Inter_700Bold" : "Inter_600SemiBold" }]}>
                     {item.dog?.name ?? "Unknown"}
                   </Text>
-                  {item.lastMsg && (
-                    <Text style={[styles.time, { color: colors.mutedForeground }]}>
-                      {new Date(item.lastMsg.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </Text>
-                  )}
+                  {timeStr ? <Text style={[styles.time, { color: colors.mutedForeground }]}>{timeStr}</Text> : null}
                 </View>
-                <Text
-                  style={[
-                    styles.lastMsg,
-                    { color: hasUnread ? colors.foreground : colors.mutedForeground },
-                    hasUnread && { fontFamily: "Inter_600SemiBold" },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {item.lastMsg?.text ?? "Say hello to " + (item.dog?.name ?? "them") + "!"}
+                <Text style={[styles.preview, { color: isUnread ? colors.foreground : colors.mutedForeground,
+                  fontFamily: isUnread ? "Inter_500Medium" : "Inter_400Regular" }]} numberOfLines={1}>
+                  {item.lastMsg?.text ?? `Say hello to ${item.dog?.name ?? "them"}!`}
                 </Text>
               </View>
-              {hasUnread && (
-                <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
-              )}
             </TouchableOpacity>
           );
         }}
@@ -104,30 +87,19 @@ export default function MessagesScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingBottom: 12 },
-  headerTitle: { fontSize: 28, fontFamily: "Inter_700Bold" },
-  list: { paddingHorizontal: 0 },
-  empty: { alignItems: "center", gap: 10, paddingTop: 60, paddingHorizontal: 40 },
+  header: { paddingHorizontal: 20, paddingBottom: 14 },
+  headerTitle: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
+  headerSub: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 },
+  list: {},
+  empty: { alignItems: "center", gap: 12, paddingTop: 70, paddingHorizontal: 40 },
   emptyTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold" },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
-  chatRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    gap: 14,
-  },
-  avatar: { width: 52, height: 52, justifyContent: "center", alignItems: "center" },
-  chatInfo: { flex: 1 },
-  chatTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  dogName: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  row: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 14, gap: 14, borderBottomWidth: 1 },
+  avatar: { width: 50, height: 50, borderRadius: 25, justifyContent: "center", alignItems: "center", position: "relative" },
+  unreadDot: { position: "absolute", top: 0, right: 0, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: "transparent" },
+  info: { flex: 1 },
+  rowTop: { flexDirection: "row", justifyContent: "space-between", marginBottom: 3 },
+  name: { fontSize: 16 },
   time: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  lastMsg: { fontSize: 14, fontFamily: "Inter_400Regular" },
-  unreadDot: { width: 10, height: 10, borderRadius: 5 },
-  separator: { height: 1, marginLeft: 86 },
+  preview: { fontSize: 14 },
 });
