@@ -76,7 +76,7 @@ interface MessageCursorResponseDTO {
   hasMore: boolean;
 }
 
-const CHATS_STORAGE = "@pawmatch_chats";
+const CHATS_STORAGE = "@pawrishta_chats";
 
 const MOCK_DOGS: Dog[] = [
   {

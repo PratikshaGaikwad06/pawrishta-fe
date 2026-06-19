@@ -57,7 +57,7 @@ export default function LoginScreen() {
             <MaterialCommunityIcons name="dog-side" size={52} color={colors.primary} />
           </View>
         </View>
-        <Text style={[styles.heroTitle, { color: colors.foreground }]}>PawMatch</Text>
+        <Text style={[styles.heroTitle, { color: colors.foreground }]}>Pawrishta</Text>
         <Text style={[styles.heroSub, { color: colors.mutedForeground }]}>
           Where tails meet tails
         </Text>

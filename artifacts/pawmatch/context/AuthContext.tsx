@@ -111,7 +111,7 @@ const AuthContext = createContext<AuthContextType>({
   updateProfile: () => {},
 });
 
-const STORAGE_KEY = "@pawmatch_auth";
+const STORAGE_KEY = "@pawrishta_auth";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [owner, setOwner] = useState<Owner | null>(null);

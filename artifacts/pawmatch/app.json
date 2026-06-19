@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "PawMatch",
-    "slug": "pawmatch",
+    "name": "Pawrishta",
+    "slug": "pawrishta",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "pawmatch",
+    "scheme": "pawrishta",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,10 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.pawmatch.app"
+      "bundleIdentifier": "com.pawrishta.app"
     },
     "android": {
-      "package": "com.pawmatch.app"
+      "package": "com.pawrishta.app"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
