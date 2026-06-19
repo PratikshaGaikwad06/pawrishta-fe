@@ -216,7 +216,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ]);
       const all = [...(received ?? []), ...(sent ?? [])];
       setRequests(all.map((i) => mapInterestToRequest(i, userId)));
-    } catch {}
+    } catch (err) {
+      console.warn("[AppContext] Failed to load interests:", err);
+    }
   }, []);
 
   const loadChats = useCallback(async (userId: string) => {
@@ -242,7 +244,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               text: m.content,
               createdAt: m.createdAt,
             }));
-          } catch {
+          } catch (err) {
+            console.warn(`[AppContext] Failed to load messages for chat ${c.id}:`, err);
             newChats[matchId] = [];
           }
         }),
@@ -250,7 +253,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       setChatIdMap(newChatIdMap);
       setChats(newChats);
-    } catch {}
+    } catch (err) {
+      console.warn("[AppContext] Failed to load chats:", err);
+    }
   }, []);
 
   useEffect(() => {
@@ -265,7 +270,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         const stored = await AsyncStorage.getItem(CHATS_STORAGE);
         if (stored) setChats(JSON.parse(stored));
-      } catch {}
+      } catch (err) {
+        console.warn("[AppContext] Failed to restore chats from storage:", err);
+      }
     })();
   }, [owner?.id]);
 
@@ -294,19 +301,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
       setRequests((prev) => [...prev, optimistic]);
 
+      const dogIdNum = parseInt(toDogId, 10);
+      if (isNaN(dogIdNum)) {
+        console.warn("[AppContext] sendRequest: toDogId is not a valid numeric ID:", toDogId);
+        setRequests((prev) => prev.filter((r) => r.id !== optimistic.id));
+        return;
+      }
+
       try {
         const res = await apiFetch<InterestResponseDTO>(
           `/api/v1/users/${owner.id}/interests`,
           {
             method: "POST",
-            body: JSON.stringify({ dogId: parseInt(toDogId, 10) }),
+            body: JSON.stringify({ dogId: dogIdNum }),
           },
         );
         const confirmed = mapInterestToRequest(res, owner.id);
         setRequests((prev) =>
           prev.map((r) => (r.id === optimistic.id ? confirmed : r)),
         );
-      } catch {
+      } catch (err) {
+        console.warn("[AppContext] Failed to send interest:", err);
         setRequests((prev) => prev.filter((r) => r.id !== optimistic.id));
       }
     },
@@ -334,7 +349,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (accept) {
           await loadChats(owner.id);
         }
-      } catch {
+      } catch (err) {
+        console.warn("[AppContext] Failed to respond to interest:", err);
         await loadInterests(owner.id);
       }
     },
@@ -384,7 +400,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               m.id === msg.id ? confirmed : m,
             ),
           }));
-        } catch {}
+        } catch (err) {
+          console.warn("[AppContext] Failed to send message via API:", err);
+        }
       } else {
         setChats((prev) => {
           const updated = { ...prev, [matchId]: [...(prev[matchId] ?? []), msg] };

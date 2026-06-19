@@ -127,7 +127,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setOwner(o);
           setMyDog(d);
         }
-      } catch {}
+      } catch (err) {
+        console.warn("[AuthContext] Failed to restore session from storage:", err);
+      }
       setIsLoading(false);
     })();
   }, []);
@@ -153,7 +155,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setMyDog(d);
           await persist(refreshedOwner, d);
           return;
-        } catch {
+        } catch (err) {
+          console.warn("[AuthContext] Could not refresh user from API, using cached data:", err);
           setOwner(o);
           setMyDog(d);
           return;

@@ -6,9 +6,8 @@ if [ -z "$GITHUB_TOKEN" ]; then
   exit 1
 fi
 
-git remote set-url github "https://PratikshaGaikwad06:${GITHUB_TOKEN}@github.com/PratikshaGaikwad06/pawrishta-fe.git" 2>/dev/null || \
-  git remote add github "https://PratikshaGaikwad06:${GITHUB_TOKEN}@github.com/PratikshaGaikwad06/pawrishta-fe.git"
+REMOTE_URL="https://PratikshaGaikwad06:${GITHUB_TOKEN}@github.com/PratikshaGaikwad06/pawrishta-fe.git"
 
 echo "Pushing to GitHub..."
-git push github HEAD:main
+git push "$REMOTE_URL" HEAD:main
 echo "Done! Code is live at https://github.com/PratikshaGaikwad06/pawrishta-fe"
